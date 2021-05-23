@@ -8,10 +8,9 @@ pkg_check_modules(evdev libevdev)
 
 find_package(Threads REQUIRED)
 
-
-add_executable(input-test
+add_executable(virtual-controller
   main.cc
   )
 
-target_link_libraries(input-test
+target_link_libraries(virtual-controller
   Threads::Threads)
