@@ -31,14 +31,15 @@ std::map<int, int> keymap{
     {KEY_0, BTN_DPAD_UP},
     {KEY_MINUS, BTN_DPAD_DOWN},
 };
-} // namespace
 
 std::map<int, std::pair<int, bool>> absmap{
     {KEY_A, {ABS_X, false}}, {KEY_D, {ABS_X, true}},   {KEY_W, {ABS_Y, false}},
     {KEY_S, {ABS_Y, true}},  {KEY_F, {ABS_RX, false}}, {KEY_J, {ABS_RX, true}}};
 
-struct device {
-  device() {
+} // namespace
+
+struct input_device {
+  input_device() {
     _open();
 
     _ioctl(UI_SET_EVBIT, EV_KEY);
@@ -117,7 +118,7 @@ struct device {
     _ioctl(UI_DEV_CREATE);
   }
 
-  ~device() {
+  ~input_device() {
     _ioctl(UI_DEV_DESTROY);
     close(this->fd);
   }
@@ -153,7 +154,7 @@ private:
   int fd;
 };
 
-struct input_ev : std::enable_shared_from_this<input_ev> {
+struct input_event_receiver : std::enable_shared_from_this<input_event_receiver> {
 
   struct abs_event {
     bool press;
@@ -163,8 +164,8 @@ struct input_ev : std::enable_shared_from_this<input_ev> {
   using abs_map = std::map<int, abs_event>;
   using input_event_vec = std::vector<input_event>;
 
-  input_ev(asio::io_context &ctx, std::string const &file)
-      : dev{std::make_shared<device>()},
+  input_event_receiver(asio::io_context &ctx, std::string const &file)
+      : dev{std::make_shared<input_device>()},
         sd{std::make_shared<asio::posix::stream_descriptor>(
             ctx, open(file.c_str(), O_RDONLY))},
         evs{std::make_shared<input_event_vec>()},
@@ -228,10 +229,9 @@ struct input_ev : std::enable_shared_from_this<input_ev> {
     sd->async_read_some(asio::buffer(*evs), *this);
   }
 
-  std::shared_ptr<device> dev;
+  std::shared_ptr<input_device> dev;
   std::shared_ptr<asio::posix::stream_descriptor> sd;
   std::shared_ptr<input_event_vec> evs;
-
   std::shared_ptr<abs_map> map;
 };
 
@@ -239,7 +239,7 @@ int main(int argc, char *argv[]) {
 
   asio::io_context ctx;
 
-  auto ev{std::make_shared<input_ev>(ctx, "/dev/input/event3")};
+  auto ev{std::make_shared<input_event_receiver>(ctx, "/dev/input/event3")};
   (*ev)({}, 0);
 
   asio::steady_timer timer{ctx};
